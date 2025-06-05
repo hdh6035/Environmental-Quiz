@@ -535,28 +535,38 @@ function getRandomQuestions() {
 
 function startQuiz() {
     const quizCompleted = localStorage.getItem('quizCompleted') === 'true';
-    
-    if (quizCompleted) {
-        // 수정: 저장된 데이터를 불러와 점수와 결과를 표시
-        const savedScore = localStorage.getItem('quizScore'); // 점수 불러오기
-        const savedUserAnswers = JSON.parse(localStorage.getItem('quizUserAnswers')); // 사용자 답변 불러오기
-        const savedQuestions = JSON.parse(localStorage.getItem('quizSelectedQuestions')); // 선택된 문제 불러오기
+    const lastQuizDate = localStorage.getItem('quizDate');
+    const today = new Date().toISOString().split('T')[0];
+    const resetDate = '2025-06-10'; // 고정된 리셋 날짜
 
-        // 저장된 데이터가 모두 존재하는지 확인
+    // 퀴즈가 완료되었고, 오늘 날짜가 지정된 리셋 날짜 이상이면 리셋
+    if (quizCompleted && today >= resetDate) {
+        localStorage.removeItem('quizCompleted');
+        localStorage.removeItem('quizScore');
+        localStorage.removeItem('quizUserAnswers');
+        localStorage.removeItem('quizSelectedQuestions');
+        localStorage.removeItem('quizDate');
+    }
+
+    const isQuizCompleted = localStorage.getItem('quizCompleted') === 'true';
+    if (isQuizCompleted) {
+        const savedScore = localStorage.getItem('quizScore');
+        const savedUserAnswers = JSON.parse(localStorage.getItem('quizUserAnswers'));
+        const savedQuestions = JSON.parse(localStorage.getItem('quizSelectedQuestions'));
+
         if (savedScore && savedUserAnswers && savedQuestions) {
-            score = parseInt(savedScore); // 저장된 점수를 정수로 변환
-            userAnswers = savedUserAnswers; // 사용자 답변 복원
-            selectedQuestions = savedQuestions; // 선택된 문제 복원
-            showScore(); // 점수와 결과를 표시
+            score = parseInt(savedScore);
+            userAnswers = savedUserAnswers;
+            selectedQuestions = savedQuestions;
+            showScore();
         } else {
-            // 저장된 데이터가 없으면 리셋 안내 메시지 표시
             questionElement.innerHTML = "퀴즈는 이미 완료되었습니다. 리셋 키를 입력해 재시작하세요.";
             answerButtonsElement.style.display = 'none';
             nextButton.style.display = 'none';
         }
         return;
     }
-    
+
     currentQuestionIndex = 0;
     score = 0;
     userAnswers = [];
@@ -564,6 +574,7 @@ function startQuiz() {
     nextButton.innerHTML = '다음';
     nextButton.style.display = 'none';
     answerButtonsElement.style.display = 'flex';
+    localStorage.setItem('quizDate', today); // 퀴즈 시작 날짜 저장
     showQuestion();
 }
 
@@ -579,7 +590,7 @@ function showQuestion() {
         if (answer.correct) {
             button.dataset.correct = answer.correct;
         }
-        button.addEventListener('click', selectAnswer, { once: true }); // 한 번만 실행되도록 설정
+        button.addEventListener('click', selectAnswer, { once: true });
         answerButtonsElement.appendChild(button);
     });
 }
@@ -592,17 +603,17 @@ function resetState() {
 }
 
 function selectAnswer(e) {
-    if (hasAnswered) return; 
-    
+    if (hasAnswered) return;
+
     const selectedButton = e.target;
     const correct = selectedButton.dataset.correct === 'true';
     if (correct) {
         score++;
-        selectedButton.classList.add('correct'); // 정답일 때 색상 적용
+        selectedButton.classList.add('correct');
     } else {
-        selectedButton.classList.add('incorrect'); // 오답일 때 색상 적용
+        selectedButton.classList.add('incorrect');
     }
-    
+
     const currentQuestion = selectedQuestions[currentQuestionIndex];
     const correctAnswer = currentQuestion.answers.find(answer => answer.correct).text;
     userAnswers.push({
@@ -611,12 +622,12 @@ function selectAnswer(e) {
         correctAnswer: correctAnswer,
         isCorrect: correct
     });
-    
+
     Array.from(answerButtonsElement.children).forEach(button => {
-        button.disabled = true; 
+        button.disabled = true;
     });
-    
-    hasAnswered = true; 
+
+    hasAnswered = true;
     nextButton.style.display = 'block';
 }
 
@@ -645,58 +656,56 @@ nextButton.addEventListener('click', () => {
 
 function showScore() {
     resetState();
-    // 점수와 문제 수 확인
-    console.log("Final Score:", score, "Total Questions:", selectedQuestions.length);  
-    if (score > selectedQuestions.length) {   
-        score = selectedQuestions.length; // 최대 점수를 문제 수로 제한  
-        console.warn("Score exceeded total questions. Adjusted to:", score);  
+    console.log("Final Score:", score, "Total Questions:", selectedQuestions.length);
+    if (score > selectedQuestions.length) {
+        score = selectedQuestions.length;
+        console.warn("Score exceeded total questions. Adjusted to:", score);
     }
-    
+
     questionElement.innerHTML = `당신의 점수는 ${selectedQuestions.length}점 만점에 ${score}점입니다!`;
     nextButton.style.display = 'none';
-    
+
     const resultsDiv = document.createElement('div');
     resultsDiv.classList.add('results');
-    
+
     userAnswers.forEach((answer, index) => {
         const resultItem = document.createElement('div');
         resultItem.classList.add('result-item');
         resultItem.classList.add(answer.isCorrect ? 'correct' : 'incorrect');
-        
+
         const questionP = document.createElement('p');
         questionP.innerHTML = `<strong>${index + 1}. ${answer.question}</strong>`;
-        
+
         const userAnswerP = document.createElement('p');
         userAnswerP.classList.add('user-answer');
         userAnswerP.innerHTML = `당신의 답변: ${answer.userAnswer}`;
-        
+
         const correctAnswerP = document.createElement('p');
         correctAnswerP.classList.add('correct-answer');
         correctAnswerP.innerHTML = `정답: ${answer.correctAnswer}`;
-        
+
         resultItem.appendChild(questionP);
         resultItem.appendChild(userAnswerP);
         resultItem.appendChild(correctAnswerP);
         resultsDiv.appendChild(resultItem);
     });
-    
+
     answerButtonsElement.appendChild(resultsDiv);
-    
-    // 수정: localStorage에 퀴즈 데이터를 저장하여 새로고침 후에도 결과가 유지되도록 함
-    localStorage.setItem('quizCompleted', 'true'); // 퀴즈 완료 상태 저장
-    localStorage.setItem('quizScore', score.toString()); // 점수를 문자열로 저장
-    localStorage.setItem('quizUserAnswers', JSON.stringify(userAnswers)); // 사용자 답변을 JSON 문자열로 저장
-    localStorage.setItem('quizSelectedQuestions', JSON.stringify(selectedQuestions)); // 선택된 문제를 JSON 문자열로 저장
+
+    localStorage.setItem('quizCompleted', 'true');
+    localStorage.setItem('quizScore', score.toString());
+    localStorage.setItem('quizUserAnswers', JSON.stringify(userAnswers));
+    localStorage.setItem('quizSelectedQuestions', JSON.stringify(selectedQuestions));
 }
 
 resetButton.addEventListener('click', () => {
     const inputKey = resetKeyInput.value.trim();
     if (inputKey === RESET_KEY) {
-        // 수정: 리셋 시 모든 저장된 데이터를 삭제하여 퀴즈를 초기화
-        localStorage.removeItem('quizCompleted'); // 퀴즈 완료 상태 삭제
-        localStorage.removeItem('quizScore'); // 저장된 점수 삭제
-        localStorage.removeItem('quizUserAnswers'); // 저장된 사용자 답변 삭제
-        localStorage.removeItem('quizSelectedQuestions'); // 저장된 선택된 문제 삭제
+        localStorage.removeItem('quizCompleted');
+        localStorage.removeItem('quizScore');
+        localStorage.removeItem('quizUserAnswers');
+        localStorage.removeItem('quizSelectedQuestions');
+        localStorage.removeItem('quizDate');
         resetKeyInput.value = '';
         alert('퀴즈가 리셋되었습니다. 다시 시작할 수 있습니다.');
         startQuiz();
