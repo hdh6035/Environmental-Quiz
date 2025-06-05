@@ -537,7 +537,7 @@ function startQuiz() {
     const quizCompleted = localStorage.getItem('quizCompleted') === 'true';
     const lastQuizDate = localStorage.getItem('quizDate');
     const today = new Date().toISOString().split('T')[0];
-    const resetDate = '2025-06-10'; // 고정된 리셋 날짜
+    const resetDate = '2025-06-04'; // 고정된 리셋 날짜
 
     // 퀴즈가 완료되었고, 오늘 날짜가 지정된 리셋 날짜 이상이면 리셋
     if (quizCompleted && today >= resetDate) {
