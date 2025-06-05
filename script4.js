@@ -549,6 +549,8 @@ function startQuiz() {
     }
 
     const isQuizCompleted = localStorage.getItem('quizCompleted') === 'true';
+    console.log("Is Quiz Completed after reset check:", isQuizCompleted);
+    
     if (isQuizCompleted) {
         const savedScore = localStorage.getItem('quizScore');
         const savedUserAnswers = JSON.parse(localStorage.getItem('quizUserAnswers'));
