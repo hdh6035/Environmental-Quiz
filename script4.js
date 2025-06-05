@@ -544,7 +544,7 @@ function checkAndResetDaily() {
 
 function getRandomQuestions() {
     const shuffled = [...questions].sort(() => 0.5 - Math.random());
-    const result = shuffled.slice(0, 5);
+    const result = shuffled.slice(0, 3);
     return result;
 }
 
