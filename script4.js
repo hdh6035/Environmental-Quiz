@@ -529,28 +529,44 @@ const RESET_KEY = "a6398175!";
 
 function getRandomQuestions() {
     const shuffled = [...questions].sort(() => 0.5 - Math.random());
-    const result = shuffled.slice(0, 5);
-    return result;
+    return shuffled.slice(0, 5);
+}
+
+// 퀴즈 초기화 함수
+function resetQuiz() {
+    localStorage.removeItem('quizCompleted');
+    localStorage.removeItem('quizScore');
+    localStorage.removeItem('quizUserAnswers');
+    localStorage.removeItem('quizSelectedQuestions');
+    localStorage.removeItem('lastResetDate');
+    currentQuestionIndex = 0;
+    score = 0;
+    userAnswers = [];
+    selectedQuestions = [];
+    resetKeyInput.value = '';
+    answerButtonsElement.style.display = 'flex';
+    startQuiz();
+}
+
+// 날짜 확인 및 자동 초기화
+function checkAndResetDaily() {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 형식
+    const lastResetDate = localStorage.getItem('lastResetDate');
+    
+    // 마지막 초기화 날짜가 없거나 오늘과 다르면 초기화
+    if (!lastResetDate || lastResetDate !== today) {
+        resetQuiz();
+        localStorage.setItem('lastResetDate', today);
+    }
 }
 
 function startQuiz() {
-    const quizCompleted = localStorage.getItem('quizCompleted') === 'true';
-    const lastQuizDate = localStorage.getItem('quizDate');
-    const today = new Date().toISOString().split('T')[0];
-    const resetDate = '2025-06-05'; // 고정된 리셋 날짜
-
-    // 퀴즈가 완료되었고, 오늘 날짜가 지정된 리셋 날짜 이상이면 리셋
-    if (quizCompleted && today >= resetDate) {
-        localStorage.removeItem('quizCompleted');
-        localStorage.removeItem('quizScore');
-        localStorage.removeItem('quizUserAnswers');
-        localStorage.removeItem('quizSelectedQuestions');
-        localStorage.removeItem('quizDate');
-    }
-
-    const isQuizCompleted = localStorage.getItem('quizCompleted') === 'true';
+    // 매일 초기화 확인
+    checkAndResetDaily();
     
-    if (isQuizCompleted) {
+    const quizCompleted = localStorage.getItem('quizCompleted') === 'true';
+    
+    if (quizCompleted) {
         const savedScore = localStorage.getItem('quizScore');
         const savedUserAnswers = JSON.parse(localStorage.getItem('quizUserAnswers'));
         const savedQuestions = JSON.parse(localStorage.getItem('quizSelectedQuestions'));
@@ -561,13 +577,13 @@ function startQuiz() {
             selectedQuestions = savedQuestions;
             showScore();
         } else {
-            questionElement.innerHTML = "퀴즈는 이미 완료되었습니다. 리셋 키를 입력해 재시작하세요.";
+            questionElement.innerHTML = "퀴즈 데이터를 불러올 수 없습니다. 리셋 키를 입력해 재시작하세요.";
             answerButtonsElement.style.display = 'none';
             nextButton.style.display = 'none';
         }
         return;
     }
-
+    
     currentQuestionIndex = 0;
     score = 0;
     userAnswers = [];
@@ -575,7 +591,6 @@ function startQuiz() {
     nextButton.innerHTML = '다음';
     nextButton.style.display = 'none';
     answerButtonsElement.style.display = 'flex';
-    localStorage.setItem('quizDate', today); // 퀴즈 시작 날짜 저장
     showQuestion();
 }
 
@@ -605,7 +620,7 @@ function resetState() {
 
 function selectAnswer(e) {
     if (hasAnswered) return;
-
+    
     const selectedButton = e.target;
     const correct = selectedButton.dataset.correct === 'true';
     if (correct) {
@@ -614,7 +629,7 @@ function selectAnswer(e) {
     } else {
         selectedButton.classList.add('incorrect');
     }
-
+    
     const currentQuestion = selectedQuestions[currentQuestionIndex];
     const correctAnswer = currentQuestion.answers.find(answer => answer.correct).text;
     userAnswers.push({
@@ -623,93 +638,63 @@ function selectAnswer(e) {
         correctAnswer: correctAnswer,
         isCorrect: correct
     });
-
+    
     Array.from(answerButtonsElement.children).forEach(button => {
         button.disabled = true;
     });
-
+    
     hasAnswered = true;
     nextButton.style.display = 'block';
 }
 
-function setStatusClass(element, correct) {
-    clearStatusClass(element);
-    if (correct) {
-        element.classList.add('correct');
-    } else {
-        element.classList.add('incorrect');
-    }
-}
-
-function clearStatusClass(element) {
-    element.classList.remove('correct');
-    element.classList.remove('incorrect');
-}
-
-nextButton.addEventListener('click', () => {
-    currentQuestionIndex++;
-    if (currentQuestionIndex < selectedQuestions.length) {
-        showQuestion();
-    } else {
-        showScore();
-    }
-});
-
 function showScore() {
     resetState();
-    console.log("Final Score:", score, "Total Questions:", selectedQuestions.length);
     if (score > selectedQuestions.length) {
         score = selectedQuestions.length;
-        console.warn("Score exceeded total questions. Adjusted to:", score);
     }
-
+    
     questionElement.innerHTML = `당신의 점수는 ${selectedQuestions.length}점 만점에 ${score}점입니다!`;
     nextButton.style.display = 'none';
-
+    
     const resultsDiv = document.createElement('div');
     resultsDiv.classList.add('results');
-
+    
     userAnswers.forEach((answer, index) => {
         const resultItem = document.createElement('div');
         resultItem.classList.add('result-item');
         resultItem.classList.add(answer.isCorrect ? 'correct' : 'incorrect');
-
+        
         const questionP = document.createElement('p');
         questionP.innerHTML = `<strong>${index + 1}. ${answer.question}</strong>`;
-
+        
         const userAnswerP = document.createElement('p');
         userAnswerP.classList.add('user-answer');
         userAnswerP.innerHTML = `당신의 답변: ${answer.userAnswer}`;
-
+        
         const correctAnswerP = document.createElement('p');
         correctAnswerP.classList.add('correct-answer');
         correctAnswerP.innerHTML = `정답: ${answer.correctAnswer}`;
-
+        
         resultItem.appendChild(questionP);
         resultItem.appendChild(userAnswerP);
         resultItem.appendChild(correctAnswerP);
         resultsDiv.appendChild(resultItem);
     });
-
+    
     answerButtonsElement.appendChild(resultsDiv);
-
+    
     localStorage.setItem('quizCompleted', 'true');
     localStorage.setItem('quizScore', score.toString());
     localStorage.setItem('quizUserAnswers', JSON.stringify(userAnswers));
     localStorage.setItem('quizSelectedQuestions', JSON.stringify(selectedQuestions));
+    localStorage.setItem('lastResetDate', new Date().toISOString().split('T')[0]);
 }
 
 resetButton.addEventListener('click', () => {
     const inputKey = resetKeyInput.value.trim();
     if (inputKey === RESET_KEY) {
-        localStorage.removeItem('quizCompleted');
-        localStorage.removeItem('quizScore');
-        localStorage.removeItem('quizUserAnswers');
-        localStorage.removeItem('quizSelectedQuestions');
-        localStorage.removeItem('quizDate');
-        resetKeyInput.value = '';
+        resetQuiz();
         alert('퀴즈가 리셋되었습니다. 다시 시작할 수 있습니다.');
-        startQuiz();
     } else {
         alert('잘못된 리셋 키입니다. 다시 시도하세요.');
     }
