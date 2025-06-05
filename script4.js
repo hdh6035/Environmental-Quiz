@@ -527,41 +527,29 @@ let hasAnswered = false;
 
 const RESET_KEY = "a6398175!";
 
-function getRandomQuestions() {
-    const shuffled = [...questions].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, 5);
-}
-
-// 퀴즈 초기화 함수
-function resetQuiz() {
-    localStorage.removeItem('quizCompleted');
-    localStorage.removeItem('quizScore');
-    localStorage.removeItem('quizUserAnswers');
-    localStorage.removeItem('quizSelectedQuestions');
-    localStorage.removeItem('lastResetDate');
-    currentQuestionIndex = 0;
-    score = 0;
-    userAnswers = [];
-    selectedQuestions = [];
-    resetKeyInput.value = '';
-    answerButtonsElement.style.display = 'flex';
-    startQuiz();
-}
-
-// 날짜 확인 및 자동 초기화
+// 매일 초기화 확인 및 실행
 function checkAndResetDaily() {
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 형식
     const lastResetDate = localStorage.getItem('lastResetDate');
     
     // 마지막 초기화 날짜가 없거나 오늘과 다르면 초기화
     if (!lastResetDate || lastResetDate !== today) {
-        resetQuiz();
+        localStorage.removeItem('quizCompleted');
+        localStorage.removeItem('quizScore');
+        localStorage.removeItem('quizUserAnswers');
+        localStorage.removeItem('quizSelectedQuestions');
         localStorage.setItem('lastResetDate', today);
     }
 }
 
+function getRandomQuestions() {
+    const shuffled = [...questions].sort(() => 0.5 - Math.random());
+    const result = shuffled.slice(0, 5);
+    return result;
+}
+
 function startQuiz() {
-    // 매일 초기화 확인
+    // 매일 초기화 실행
     checkAndResetDaily();
     
     const quizCompleted = localStorage.getItem('quizCompleted') === 'true';
@@ -577,7 +565,7 @@ function startQuiz() {
             selectedQuestions = savedQuestions;
             showScore();
         } else {
-            questionElement.innerHTML = "퀴즈 데이터를 불러올 수 없습니다. 리셋 키를 입력해 재시작하세요.";
+            questionElement.innerHTML = "퀴즈는 이미 완료되었습니다. 리셋 키를 입력해 재시작하세요.";
             answerButtonsElement.style.display = 'none';
             nextButton.style.display = 'none';
         }
@@ -619,7 +607,7 @@ function resetState() {
 }
 
 function selectAnswer(e) {
-    if (hasAnswered) return;
+    if (hasAnswered) return; 
     
     const selectedButton = e.target;
     const correct = selectedButton.dataset.correct === 'true';
@@ -640,17 +628,42 @@ function selectAnswer(e) {
     });
     
     Array.from(answerButtonsElement.children).forEach(button => {
-        button.disabled = true;
+        button.disabled = true; 
     });
     
-    hasAnswered = true;
+    hasAnswered = true; 
     nextButton.style.display = 'block';
 }
 
+function setStatusClass(element, correct) {
+    clearStatusClass(element);
+    if (correct) {
+        element.classList.add('correct');
+    } else {
+        element.classList.add('incorrect');
+    }
+}
+
+function clearStatusClass(element) {
+    element.classList.remove('correct');
+    element.classList.remove('incorrect');
+}
+
+nextButton.addEventListener('click', () => {
+    currentQuestionIndex++;
+    if (currentQuestionIndex < selectedQuestions.length) {
+        showQuestion();
+    } else {
+        showScore();
+    }
+});
+
 function showScore() {
     resetState();
-    if (score > selectedQuestions.length) {
+    console.log("Final Score:", score, "Total Questions:", selectedQuestions.length);  
+    if (score > selectedQuestions.length) {   
         score = selectedQuestions.length;
+        console.warn("Score exceeded total questions. Adjusted to:", score);  
     }
     
     questionElement.innerHTML = `당신의 점수는 ${selectedQuestions.length}점 만점에 ${score}점입니다!`;
@@ -693,8 +706,14 @@ function showScore() {
 resetButton.addEventListener('click', () => {
     const inputKey = resetKeyInput.value.trim();
     if (inputKey === RESET_KEY) {
-        resetQuiz();
+        localStorage.removeItem('quizCompleted');
+        localStorage.removeItem('quizScore');
+        localStorage.removeItem('quizUserAnswers');
+        localStorage.removeItem('quizSelectedQuestions');
+        localStorage.removeItem('lastResetDate');
+        resetKeyInput.value = '';
         alert('퀴즈가 리셋되었습니다. 다시 시작할 수 있습니다.');
+        startQuiz();
     } else {
         alert('잘못된 리셋 키입니다. 다시 시도하세요.');
     }
